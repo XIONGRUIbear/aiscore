@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>评分</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+<script src="data.js"></script>
+
+<style>
+input{width:50px;margin:2px;}
+h3{background:#eee;padding:5px;}
+</style>
+</head>
+
+<body>
+
+<h2>评分页面</h2>
+<div id="scoreArea"></div>
+<button onclick="submit()">提交</button>
+
+<script>
+const supabaseUrl = "填你的URL"
+const supabaseKey = "填你的KEY"
+const client = supabase.createClient(supabaseUrl, supabaseKey)
+
+const urlParams = new URLSearchParams(window.location.search)
+const myGroup = urlParams.get("group")
+const name = urlParams.get("name")
+const studentId = urlParams.get("id")
+
+const groups = Object.keys(groupData)
+
+let result = {}
+
+function render(){
+  let html = ""
+
+  groups.forEach(g=>{
+    if(g === myGroup) return
+
+    html += `<h3>${g}</h3>`
+
+    // 组评分
+    html += `
+      数据趣味性：<input onchange="setScore('${g}','fun',this.value)"><br>
+      展示效果：<input onchange="setScore('${g}','show',this.value)"><br>
+      问题清晰度：<input onchange="setScore('${g}','clear',this.value)"><br>
+      数据逻辑：<input onchange="setScore('${g}','logic',this.value)"><br>
+    `
+
+    // 成员评分
+    groupData[g].forEach(m=>{
+      html += `${m}：<input onchange="setMember('${g}','${m}',this.value)"><br>`
+    })
+
+    html += "<hr>"
+  })
+
+  document.getElementById("scoreArea").innerHTML = html
+}
+
+function setScore(g, type, val){
+  if(!result[g]) result[g] = {group:{}, members:{}}
+  result[g].group[type] = Number(val)
+}
+
+function setMember(g, name, val){
+  if(!result[g]) result[g] = {group:{}, members:{}}
+  result[g].members[name] = Number(val)
+}
+
+async function submit(){
+
+  // 防重复提交
+  let { data } = await client
+    .from("scores")
+    .select("*")
+    .eq("student_id", studentId)
+
+  if(data.length > 0){
+    alert("你已经提交过")
+    return
+  }
+
+  await client.from("scores").insert([
+    {
+      name,
+      student_id: studentId,
+      group_name: myGroup,
+      scores: result
+    }
+  ])
+
+  alert("提交成功！")
+}
+
+render()
+</script>
+
+</body>
+</html>
