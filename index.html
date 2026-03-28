@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>课堂评分系统</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+
+<body>
+  <h2>课堂评分</h2>
+
+  <div id="step1">
+    <p>小组：</p>
+    <select id="group">
+      <option>1组</option>
+      <option>2组</option>
+      <option>3组</option>
+      <option>4组</option>
+      <option>5组</option>
+      <option>6组</option>
+      <option>7组</option>
+      <option>8组</option>
+    </select>
+
+    <p>姓名：</p>
+    <input id="name"/>
+
+    <p>学号：</p>
+    <input id="studentId"/>
+
+    <br><br>
+    <button onclick="next()">下一步</button>
+  </div>
+
+  <div id="step2" style="display:none">
+    <h3>评分（1-10）</h3>
+    <div id="scoreArea"></div>
+    <button onclick="submit()">提交</button>
+  </div>
+
+<script>
+const supabaseUrl = "填你的URL"
+const supabaseKey = "填你的KEY"
+const client = supabase.createClient(supabaseUrl, supabaseKey)
+
+let myGroup = ""
+let scores = {}
+
+function next(){
+  myGroup = document.getElementById("group").value
+  const groups = ["1组","2组","3组","4组","5组","6组","7组","8组"]
+
+  let html = ""
+  groups.forEach(g=>{
+    if(g !== myGroup){
+      html += `${g}: <input type="number" onchange="setScore('${g}', this.value)" /><br>`
+    }
+  })
+
+  document.getElementById("scoreArea").innerHTML = html
+  document.getElementById("step1").style.display = "none"
+  document.getElementById("step2").style.display = "block"
+}
+
+function setScore(group, value){
+  scores[group] = Number(value)
+}
+
+async function submit(){
+  const name = document.getElementById("name").value
+  const studentId = document.getElementById("studentId").value
+
+  // 防重复提交
+  let { data } = await client
+    .from("scores")
+    .select("*")
+    .eq("student_id", studentId)
+
+  if(data.length > 0){
+    alert("你已经提交过了")
+    return
+  }
+
+  await client.from("scores").insert([
+    {
+      name: name,
+      student_id: studentId,
+      group_name: myGroup,
+      scores: scores
+    }
+  ])
+
+  alert("提交成功！")
+}
+</script>
+
+</body>
+</html>
