@@ -4,9 +4,6 @@
 <meta charset="utf-8">
 <title>评分</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<script src="data.js"></script>
-
 <style>
 body { font-family: Arial; }
 input { width: 50px; margin: 3px; }
@@ -17,13 +14,11 @@ h3 { background: #eee; padding: 5px; }
 <body>
 
 <h2>评分页面</h2>
-
-<div id="debug" style="color:red;"></div>
 <div id="scoreArea"></div>
 
-<button onclick="submit()">提交</button>
-
 <script>
+
+// ✅ 直接内置数据（避免加载失败）
 const groupData = {
   "1组": ["吴嘉盛","张子璇","曾天翼","朱冠霖","杨兴鉴","何承江","鲍博源"],
   "2组": ["冼忠豪","杜承建","叶承树","殷泽木","田泽锐","吴淑桑","韦宗楚","李巧美"],
@@ -35,77 +30,38 @@ const groupData = {
   "8组": ["符凡","魏赫","韩玉兴","宋正义","林玉雄","母仕林","王可欣"],
   "9组": ["黄玉菲","刘婉慧","李诗诗","邓新怡","吴香颖","胡嘉航","唐景怡"]
 }
-const supabaseUrl = "填你的URL"
-const supabaseKey = "填你的KEY"
-const client = supabase.createClient(supabaseUrl, supabaseKey)
 
-// 👉 调试输出
-const debug = document.getElementById("debug")
-
-// 👉 获取参数
+// 👉 获取URL参数
 const params = new URLSearchParams(window.location.search)
 const myGroup = params.get("group")
-const name = params.get("name")
-const studentId = params.get("id")
-
-debug.innerHTML += "group=" + myGroup + "<br>"
-
-// 👉 检查 data.js
-if(typeof groupData === "undefined"){
-  debug.innerHTML += "❌ data.js 没加载<br>"
-}else{
-  debug.innerHTML += "✅ data.js 已加载<br>"
-}
 
 // 👉 渲染
 function render(){
-  if(!groupData){
-    debug.innerHTML += "❌ groupData不存在<br>"
-    return
-  }
-
   let html = ""
 
-  const groups = Object.keys(groupData)
-
-  groups.forEach(g=>{
-    if(g === myGroup) return
+  for(let g in groupData){
+    if(g === myGroup) continue
 
     html += `<h3>${g}</h3>`
 
     html += `
-      数据趣味性：<input onchange="setScore('${g}','fun',this.value)"><br>
-      展示效果：<input onchange="setScore('${g}','show',this.value)"><br>
+      数据趣味性：<input><br>
+      展示效果：<input><br>
     `
 
-    groupData[g].forEach(m=>{
-      html += `${m}：<input onchange="setMember('${g}','${m}',this.value)"><br>`
+    groupData[g].forEach(name=>{
+      html += `${name}：<input><br>`
     })
 
     html += "<hr>"
-  })
+  }
 
   document.getElementById("scoreArea").innerHTML = html
 }
 
-let result = {}
+// ✅ 页面加载完再执行（关键！）
+window.onload = render
 
-function setScore(g, type, val){
-  if(!result[g]) result[g] = {group:{}, members:{}}
-  result[g].group[type] = Number(val)
-}
-
-function setMember(g, name, val){
-  if(!result[g]) result[g] = {group:{}, members:{}}
-  result[g].members[name] = Number(val)
-}
-
-async function submit(){
-  alert("测试提交成功（说明页面正常）")
-}
-
-// 👉 执行
-render()
 </script>
 
 </body>
