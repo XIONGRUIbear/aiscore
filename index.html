@@ -2,168 +2,32 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>课堂评分系统</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-
-<style>
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-td, th {
-  border: 1px solid #000;
-  text-align: center;
-  padding: 8px;
-}
-input {
-  width: 50px;
-}
-</style>
+<title>评分入口</title>
 </head>
 
 <body>
-
-<h2>课堂评分</h2>
-
-<p>你的小组：
-<select id="myGroup">
-  <option>1组</option>
-  <option>2组</option>
-  <option>3组</option>
-  <option>4组</option>
-  <option>5组</option>
-  <option>6组</option>
-  <option>7组</option>
-  <option>8组</option>
-  <option>9组</option>
-</select>
-</p>
+<h2>课堂评分系统</h2>
 
 <p>姓名：<input id="name"></p>
 <p>学号：<input id="studentId"></p>
 
-<table>
-<tr>
-  <th>评分项</th>
-  <th>1组</th><th>2组</th><th>3组</th><th>4组</th>
-  <th>5组</th><th>6组</th><th>7组</th><th>8组</th><th>9组</th>
-</tr>
+<p>小组：
+<select id="group">
+  <option>1组</option><option>2组</option><option>3组</option>
+  <option>4组</option><option>5组</option><option>6组</option>
+  <option>7组</option><option>8组</option><option>9组</option>
+</select>
+</p>
 
-<tr>
-  <td>数据趣味性</td>
-  <td><input data-g="1" data-type="fun"></td>
-  <td><input data-g="2" data-type="fun"></td>
-  <td><input data-g="3" data-type="fun"></td>
-  <td><input data-g="4" data-type="fun"></td>
-  <td><input data-g="5" data-type="fun"></td>
-  <td><input data-g="6" data-type="fun"></td>
-  <td><input data-g="7" data-type="fun"></td>
-  <td><input data-g="8" data-type="fun"></td>
-  <td><input data-g="9" data-type="fun"></td>
-</tr>
-
-<tr>
-  <td>呈现度</td>
-  <td><input data-g="1" data-type="ui"></td>
-  <td><input data-g="2" data-type="ui"></td>
-  <td><input data-g="3" data-type="ui"></td>
-  <td><input data-g="4" data-type="ui"></td>
-  <td><input data-g="5" data-type="ui"></td>
-  <td><input data-g="6" data-type="ui"></td>
-  <td><input data-g="7" data-type="ui"></td>
-  <td><input data-g="8" data-type="ui"></td>
-  <td><input data-g="9" data-type="ui"></td>
-</tr>
-
-<tr>
-  <td>问题清晰度</td>
-  <td><input data-g="1" data-type="clear"></td>
-  <td><input data-g="2" data-type="clear"></td>
-  <td><input data-g="3" data-type="clear"></td>
-  <td><input data-g="4" data-type="clear"></td>
-  <td><input data-g="5" data-type="clear"></td>
-  <td><input data-g="6" data-type="clear"></td>
-  <td><input data-g="7" data-type="clear"></td>
-  <td><input data-g="8" data-type="clear"></td>
-  <td><input data-g="9" data-type="clear"></td>
-</tr>
-
-<tr>
-  <td>数据逻辑</td>
-  <td><input data-g="1" data-type="logic"></td>
-  <td><input data-g="2" data-type="logic"></td>
-  <td><input data-g="3" data-type="logic"></td>
-  <td><input data-g="4" data-type="logic"></td>
-  <td><input data-g="5" data-type="logic"></td>
-  <td><input data-g="6" data-type="logic"></td>
-  <td><input data-g="7" data-type="logic"></td>
-  <td><input data-g="8" data-type="logic"></td>
-  <td><input data-g="9" data-type="logic"></td>
-</tr>
-
-<tr>
-  <td>展示效果</td>
-  <td><input data-g="1" data-type="show"></td>
-  <td><input data-g="2" data-type="show"></td>
-  <td><input data-g="3" data-type="show"></td>
-  <td><input data-g="4" data-type="show"></td>
-  <td><input data-g="5" data-type="show"></td>
-  <td><input data-g="6" data-type="show"></td>
-  <td><input data-g="7" data-type="show"></td>
-  <td><input data-g="8" data-type="show"></td>
-  <td><input data-g="9" data-type="show"></td>
-</tr>
-
-</table>
-
-<br>
-<button onclick="submit()">提交</button>
+<button onclick="next()">开始评分</button>
 
 <script>
-const supabaseUrl = "填你的URL"
-const supabaseKey = "填你的KEY"
-const client = supabase.createClient(supabaseUrl, supabaseKey)
+function next(){
+  const name = document.getElementById("name").value
+  const id = document.getElementById("studentId").value
+  const group = document.getElementById("group").value
 
-async function submit(){
-  const inputs = document.querySelectorAll("input[data-g]")
-  const scores = {}
-
-  inputs.forEach(i=>{
-    const g = i.dataset.g
-    const type = i.dataset.type
-
-    if(!scores[g]) scores[g] = {}
-    scores[g][type] = Number(i.value || 0)
-  })
-
-  const myGroup = document.getElementById("myGroup").value
-  const studentId = document.getElementById("studentId").value
-
-  // 禁止给自己组打分
-  const myGroupNum = myGroup.replace("组","")
-  delete scores[myGroupNum]
-
-  // 防重复
-  let { data } = await client
-    .from("scores")
-    .select("*")
-    .eq("student_id", studentId)
-
-  if(data.length > 0){
-    alert("已经提交过")
-    return
-  }
-
-  await client.from("scores").insert([
-    {
-      name: document.getElementById("name").value,
-      student_id: studentId,
-      group_name: myGroup,
-      scores: scores
-    }
-  ])
-
-  alert("提交成功！")
+  location.href = `score.html?name=${name}&id=${id}&group=${group}`
 }
 </script>
 
