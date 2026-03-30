@@ -100,42 +100,38 @@ async function submit(){
     return
   }
 
-  // 把所有打分展开成逐行记录
   const rows = []
   for(let g in result){
     const gScore = result[g].group || {}
     const members = result[g].members || {}
 
-    // 先按成员逐行插入（含组级分）
     for(let memberName in members){
       const m = members[memberName]
       rows.push({
-        voter_name:    voterName,
-        voter_id:      voterId,
-        voter_group:   myGroup,
-        scored_group:  g,
-        group_fun:     gScore.fun  ?? null,
-        group_intro:   gScore.intro ?? null,
-        member_name:   memberName,
-        member_beauty: m.beauty ?? null,
-        member_clear:  m.clear  ?? null,
-        member_logic:  m.logic  ?? null,
-        member_show:   m.show   ?? null
+        "名字":   voterName,
+        "学号":   voterId,
+        "组号":   myGroup,
+        "被评组": g,
+        "趣味性": gScore.fun   ?? null,
+        "成员介绍": gScore.intro ?? null,
+        "成员姓名": memberName,
+        "美观性": m.beauty ?? null,
+        "清晰度": m.clear  ?? null,
+        "逻辑性": m.logic  ?? null,
+        "展示效果": m.show  ?? null
       })
     }
 
-    // 如果某组只打了组级分、没有任何成员分，也保留一行
     if(Object.keys(members).length === 0 && Object.keys(gScore).length > 0){
       rows.push({
-        voter_name:   voterName,
-        voter_id:     voterId,
-        voter_group:  myGroup,
-        scored_group: g,
-        group_fun:    gScore.fun  ?? null,
-        group_intro:  gScore.intro ?? null,
-        member_name:  null,
-        member_beauty:null, member_clear:null,
-        member_logic: null, member_show: null
+        "名字":   voterName,
+        "学号":   voterId,
+        "组号":   myGroup,
+        "被评组": g,
+        "趣味性": gScore.fun   ?? null,
+        "成员介绍": gScore.intro ?? null,
+        "成员姓名": null,
+        "美观性": null, "清晰度": null, "逻辑性": null, "展示效果": null
       })
     }
   }
