@@ -4,18 +4,42 @@
 <meta charset="utf-8">
 <title>评分页面</title>
 <style>
-body { font-family: Arial; padding: 10px; }
-h2 { background: #333; color: #fff; padding: 10px; }
-h3 { background: #eee; padding: 5px; }
-input { width: 50px; margin: 3px; }
-.member { margin-left: 15px; border-bottom: 1px solid #ccc; padding: 5px; }
+body {
+  font-family: Arial;
+  padding: 10px;
+}
+h2 {
+  background: #333;
+  color: #fff;
+  padding: 10px;
+}
+h3 {
+  background: #eee;
+  padding: 5px;
+}
+input[type="number"] {
+  width: 50px;
+  margin: 3px;
+}
+.member {
+  margin-left: 15px;
+  border-bottom: 1px solid #ccc;
+  padding: 5px;
+}
+#submitBtn {
+  margin: 20px 0;
+  padding: 10px 30px;
+  font-size: 16px;
+  cursor: pointer;
+}
 </style>
 </head>
 <body>
 <h2>课堂评分系统</h2>
+<div id="info"></div>
 <div id="scoreArea"></div>
 <br>
-<button onclick="submit()">提交评分</button>
+<button id="submitBtn" onclick="submit()">提交评分</button>
 
 <script>
 // ========== Supabase 配置 ==========
@@ -36,15 +60,22 @@ const groupData = {
   "9组": ["黄玉菲","刘婉慧","李诗诗","邓新怡","吴香颖","胡嘉航","唐景怡"]
 }
 
-// ========== 从 index.html 取参数 ==========
+// ========== 从 index.html 获取参数 ==========
 const params = new URLSearchParams(window.location.search)
 const myGroup = params.get("group")
 const voterName = params.get("name")
 const voterId = params.get("id")
 
+// ========== 存储评分结果 ==========
 let result = {}
 
-// ========== 渲染页面 ==========
+// ========== 显示当前用户信息 ==========
+function showInfo(){
+  document.getElementById("info").innerHTML =
+    `<p>👤 <b>${voterName}</b> &nbsp;|&nbsp; 学号：${voterId} &nbsp;|&nbsp; 所在组：${myGroup}</p>`
+}
+
+// ========== 渲染评分页面 ==========
 function render(){
   let html = ""
   for(let g in groupData){
@@ -82,11 +113,13 @@ function render(){
   document.getElementById("scoreArea").innerHTML = html
 }
 
+// ========== 记录小组评分 ==========
 function setGroupScore(group, type, value){
   if(!result[group]) result[group] = {group:{}, members:{}}
   result[group].group[type] = Number(value)
 }
 
+// ========== 记录成员评分 ==========
 function setMember(group, name, type, value){
   if(!result[group]) result[group] = {group:{}, members:{}}
   if(!result[group].members[name]) result[group].members[name] = {}
@@ -100,46 +133,14 @@ async function submit(){
     return
   }
 
-  const rows = []
-  for(let g in result){
-    const gScore = result[g].group || {}
-    const members = result[g].members || {}
-
-    for(let memberName in members){
-      const m = members[memberName]
-      rows.push({
-        "名字":   voterName,
-        "学号":   voterId,
-        "组号":   myGroup,
-        "被评组": g,
-        "趣味性": gScore.fun   ?? null,
-        "成员介绍": gScore.intro ?? null,
-        "成员姓名": memberName,
-        "美观性": m.beauty ?? null,
-        "清晰度": m.clear  ?? null,
-        "逻辑性": m.logic  ?? null,
-        "展示效果": m.show  ?? null
-      })
-    }
-
-    if(Object.keys(members).length === 0 && Object.keys(gScore).length > 0){
-      rows.push({
-        "名字":   voterName,
-        "学号":   voterId,
-        "组号":   myGroup,
-        "被评组": g,
-        "趣味性": gScore.fun   ?? null,
-        "成员介绍": gScore.intro ?? null,
-        "成员姓名": null,
-        "美观性": null, "清晰度": null, "逻辑性": null, "展示效果": null
-      })
-    }
-  }
-
-  if(rows.length === 0){
+  if(Object.keys(result).length === 0){
     alert("还没有任何评分，请先打分再提交！")
     return
   }
+
+  const btn = document.getElementById("submitBtn")
+  btn.disabled = true
+  btn.textContent = "提交中..."
 
   try {
     const res = await fetch(`${supabaseUrl}/rest/v1/${TABLE}`, {
@@ -150,23 +151,37 @@ async function submit(){
         "Authorization": "Bearer " + supabaseKey,
         "Prefer": "return=minimal"
       },
-      body: JSON.stringify(rows)
+      body: JSON.stringify({
+        "名字": voterName,
+        "学号": voterId,
+        "组号": myGroup,
+        "所有评分": result
+      })
     })
 
     if(res.ok){
       alert("✅ 提交成功！感谢你的评分。")
+      btn.textContent = "已提交 ✅"
     } else {
       const err = await res.json()
       console.error("Supabase 错误：", err)
       alert("❌ 提交失败：" + (err.message || res.status))
+      btn.disabled = false
+      btn.textContent = "提交评分"
     }
   } catch(e){
     console.error(e)
     alert("❌ 网络错误，请检查网络后重试。")
+    btn.disabled = false
+    btn.textContent = "提交评分"
   }
 }
 
-window.onload = render
+// ========== 页面加载 ==========
+window.onload = function(){
+  showInfo()
+  render()
+}
 </script>
 </body>
 </html>
