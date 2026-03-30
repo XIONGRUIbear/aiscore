@@ -3,49 +3,27 @@
 <head>
 <meta charset="utf-8">
 <title>评分页面</title>
-
 <style>
-body {
-  font-family: Arial;
-  padding: 10px;
-}
-
-h2 {
-  background: #333;
-  color: #fff;
-  padding: 10px;
-}
-
-h3 {
-  background: #eee;
-  padding: 5px;
-}
-
-input {
-  width: 50px;
-  margin: 3px;
-}
-
-.member {
-  margin-left: 15px;
-  border-bottom: 1px solid #ccc;
-  padding: 5px;
-}
+body { font-family: Arial; padding: 10px; }
+h2 { background: #333; color: #fff; padding: 10px; }
+h3 { background: #eee; padding: 5px; }
+input { width: 50px; margin: 3px; }
+.member { margin-left: 15px; border-bottom: 1px solid #ccc; padding: 5px; }
 </style>
 </head>
-
 <body>
-
 <h2>课堂评分系统</h2>
-
 <div id="scoreArea"></div>
-
 <br>
 <button onclick="submit()">提交评分</button>
 
 <script>
+// ========== Supabase 配置 ==========
+const supabaseUrl = "https://ermnlljsfnszocizfpnd.supabase.co"
+const supabaseKey = "sb_publishable_JIujn_rk5TH7uejo2NytAQ_Xpem1ZPX"
+const TABLE = "scores"
 
-// 👇 小组成员数据（已写死，避免加载问题）
+// ========== 小组成员数据 ==========
 const groupData = {
   "1组": ["吴嘉盛","张子璇","曾天翼","朱冠霖","杨兴鉴","何承江","鲍博源"],
   "2组": ["冼忠豪","杜承建","叶承树","殷泽木","田泽锐","吴淑桑","韦宗楚","李巧美"],
@@ -58,92 +36,141 @@ const groupData = {
   "9组": ["黄玉菲","刘婉慧","李诗诗","邓新怡","吴香颖","胡嘉航","唐景怡"]
 }
 
-// 👉 获取自己小组（从 index.html 传过来）
+// ========== 从 index.html 取参数 ==========
 const params = new URLSearchParams(window.location.search)
 const myGroup = params.get("group")
+const voterName = params.get("name")
+const voterId = params.get("id")
 
-// 👉 存储评分结果
 let result = {}
 
-// 👉 渲染页面
+// ========== 渲染页面 ==========
 function render(){
   let html = ""
-
   for(let g in groupData){
-
-    // 不给自己组打分
     if(g === myGroup) continue
-
     html += `<h3>${g}</h3>`
-
-    // ✅ 小组评分
     html += `
       <b>【小组评分】</b><br>
       数据趣味性：<input type="number" min="1" max="10"
         onchange="setGroupScore('${g}','fun',this.value)"><br>
-
       成员介绍：<input type="number" min="1" max="10"
-        onchange="setGroupScore('${g}','intro',this.value)"><br>
-      <br>
+        onchange="setGroupScore('${g}','intro',this.value)"><br><br>
     `
-
-    // ✅ 成员评分
     html += `<b>【成员评分】</b><br>`
-
-    groupData[g].forEach(name=>{
+    groupData[g].forEach(name => {
       html += `
         <div class="member">
           <b>${name}</b><br>
-
           呈现度（美观性）：
           <input type="number" min="1" max="10"
             onchange="setMember('${g}','${name}','beauty',this.value)">
-
           问题清晰度：
           <input type="number" min="1" max="10"
             onchange="setMember('${g}','${name}','clear',this.value)">
-
           数据逻辑：
           <input type="number" min="1" max="10"
             onchange="setMember('${g}','${name}','logic',this.value)">
-
           展示效果：
           <input type="number" min="1" max="10"
             onchange="setMember('${g}','${name}','show',this.value)">
         </div>
       `
     })
-
     html += "<hr>"
   }
-
   document.getElementById("scoreArea").innerHTML = html
 }
 
-// 👉 记录小组评分
 function setGroupScore(group, type, value){
   if(!result[group]) result[group] = {group:{}, members:{}}
   result[group].group[type] = Number(value)
 }
 
-// 👉 记录成员评分
 function setMember(group, name, type, value){
   if(!result[group]) result[group] = {group:{}, members:{}}
   if(!result[group].members[name]) result[group].members[name] = {}
-
   result[group].members[name][type] = Number(value)
 }
 
-// 👉 提交（当前先打印）
-function submit(){
-  console.log("评分结果：", result)
-  alert("提交成功！（请在控制台查看数据）")
+// ========== 提交到 Supabase ==========
+async function submit(){
+  if(!voterName || !voterId){
+    alert("姓名或学号缺失，请返回重新填写！")
+    return
+  }
+
+  // 把所有打分展开成逐行记录
+  const rows = []
+  for(let g in result){
+    const gScore = result[g].group || {}
+    const members = result[g].members || {}
+
+    // 先按成员逐行插入（含组级分）
+    for(let memberName in members){
+      const m = members[memberName]
+      rows.push({
+        voter_name:    voterName,
+        voter_id:      voterId,
+        voter_group:   myGroup,
+        scored_group:  g,
+        group_fun:     gScore.fun  ?? null,
+        group_intro:   gScore.intro ?? null,
+        member_name:   memberName,
+        member_beauty: m.beauty ?? null,
+        member_clear:  m.clear  ?? null,
+        member_logic:  m.logic  ?? null,
+        member_show:   m.show   ?? null
+      })
+    }
+
+    // 如果某组只打了组级分、没有任何成员分，也保留一行
+    if(Object.keys(members).length === 0 && Object.keys(gScore).length > 0){
+      rows.push({
+        voter_name:   voterName,
+        voter_id:     voterId,
+        voter_group:  myGroup,
+        scored_group: g,
+        group_fun:    gScore.fun  ?? null,
+        group_intro:  gScore.intro ?? null,
+        member_name:  null,
+        member_beauty:null, member_clear:null,
+        member_logic: null, member_show: null
+      })
+    }
+  }
+
+  if(rows.length === 0){
+    alert("还没有任何评分，请先打分再提交！")
+    return
+  }
+
+  try {
+    const res = await fetch(`${supabaseUrl}/rest/v1/${TABLE}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": supabaseKey,
+        "Authorization": "Bearer " + supabaseKey,
+        "Prefer": "return=minimal"
+      },
+      body: JSON.stringify(rows)
+    })
+
+    if(res.ok){
+      alert("✅ 提交成功！感谢你的评分。")
+    } else {
+      const err = await res.json()
+      console.error("Supabase 错误：", err)
+      alert("❌ 提交失败：" + (err.message || res.status))
+    }
+  } catch(e){
+    console.error(e)
+    alert("❌ 网络错误，请检查网络后重试。")
+  }
 }
 
-// 页面加载
 window.onload = render
-
 </script>
-
 </body>
 </html>
